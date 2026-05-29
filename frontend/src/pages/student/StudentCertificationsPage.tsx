@@ -13,6 +13,8 @@ import {
   Loader2,
   Filter,
   ArrowUpDown,
+  XCircle,
+  Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { studentApi } from '@/api';
@@ -197,6 +199,8 @@ function SubmitModal({
 }
 
 export default function StudentCertificationsPage() {
+  const queryClient = useQueryClient();
+  const { addNotification } = useUIStore();
   const { user } = useAuthStore();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, APPROVED, PENDING, NOT_SUBMITTED
@@ -222,10 +226,37 @@ export default function StudentCertificationsPage() {
     setIsModalOpen(true);
   };
 
+  const deleteMutation = useMutation({
+    mutationFn: (courseCode: string) => studentApi.deleteRejectedCertification(courseCode),
+    onSuccess: () => {
+      addNotification({
+        type: 'success',
+        title: 'Certification deleted',
+        message: 'Rejected request has been permanently deleted.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['student-certifications'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-analytics'] });
+    },
+    onError: (err: any) => {
+      addNotification({
+        type: 'error',
+        title: 'Deletion failed',
+        message: err.response?.data?.message || 'Failed to delete request.',
+      });
+    },
+  });
+
+  const handleDelete = (courseCode: string, title: string) => {
+    if (window.confirm(`Delete rejected certification for ${title}?`)) {
+      deleteMutation.mutate(courseCode);
+    }
+  };
+
   const getCourseStatus = (courseCode: string) => {
     const cert = certifications.find((c) => c.courseCode === courseCode);
     if (!cert) return { type: 'NOT_SUBMITTED', label: 'Not Submitted', cert: null };
     if (cert.status === 'APPROVED') return { type: 'APPROVED', label: 'Approved', cert };
+    if (cert.status === 'REJECTED') return { type: 'REJECTED', label: 'Rejected', cert };
     return { type: 'PENDING', label: 'Pending Review', cert };
   };
 
@@ -299,6 +330,7 @@ export default function StudentCertificationsPage() {
                 { value: 'ALL', label: 'All Courses' },
                 { value: 'APPROVED', label: 'Approved' },
                 { value: 'PENDING', label: 'Pending' },
+                { value: 'REJECTED', label: 'Rejected' },
                 { value: 'NOT_SUBMITTED', label: 'Not Submitted' },
               ].map((filter) => (
                 <button
@@ -354,6 +386,7 @@ export default function StudentCertificationsPage() {
                 const { statusInfo } = course;
                 const isApproved = statusInfo.type === 'APPROVED';
                 const isPending = statusInfo.type === 'PENDING';
+                const isRejected = statusInfo.type === 'REJECTED';
 
                 return (
                   <motion.div
@@ -376,11 +409,14 @@ export default function StudentCertificationsPage() {
                               ? 'bg-green-400/10 text-green-400 border border-green-400/20'
                               : isPending
                               ? 'bg-yellow-400/10 text-yellow-400 border border-yellow-400/20'
+                              : isRejected
+                              ? 'bg-red-400/10 text-red-400 border border-red-400/20'
                               : 'bg-white/5 text-white/40 border border-white/10'
                           }`}
                         >
                           {isApproved && <CheckCircle2 className="w-2.5 h-2.5" />}
                           {isPending && <Clock className="w-2.5 h-2.5 animate-pulse" />}
+                          {isRejected && <XCircle className="w-2.5 h-2.5" />}
                           {statusInfo.label}
                         </span>
                       </div>
@@ -420,6 +456,35 @@ export default function StudentCertificationsPage() {
                           >
                             Track Link <ExternalLink className="w-3 h-3" />
                           </a>
+                        </>
+                      ) : isRejected && statusInfo.cert ? (
+                        <>
+                          <span className="text-[10px] text-red-400">
+                            Rejected
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <a
+                              href={statusInfo.cert.credlyLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-xs text-white/40 hover:text-white transition-colors"
+                            >
+                              View Link <ExternalLink className="w-3 h-3" />
+                            </a>
+                            <button
+                              onClick={() => handleDelete(course.courseCode, course.courseTitle)}
+                              disabled={deleteMutation.isPending}
+                              className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                              title="Delete request"
+                            >
+                              {deleteMutation.isPending ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3 h-3" />
+                              )}
+                              Delete
+                            </button>
+                          </div>
                         </>
                       ) : (
                         <>

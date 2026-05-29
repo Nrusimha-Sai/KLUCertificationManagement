@@ -92,7 +92,7 @@ function CertificationRow({
   };
 
   const handleReject = async () => {
-    if (!window.confirm(`Reject and delete certification from ${cert.studentName}?`)) return;
+    if (!window.confirm(`Reject certification from ${cert.studentName}?`)) return;
     setIsProcessing(true);
     onReject(cert.id);
     setTimeout(() => setIsProcessing(false), 1000);
@@ -114,10 +114,18 @@ function CertificationRow({
       </td>
       <td className="px-4 py-3">
         <span
-          className={cert.status === 'APPROVED' ? 'badge-approved' : 'badge-pending'}
+          className={
+            cert.status === 'APPROVED'
+              ? 'badge-approved'
+              : cert.status === 'REJECTED'
+              ? 'badge-rejected bg-red-400/10 border border-red-400/20 text-red-400 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold'
+              : 'badge-pending'
+          }
         >
           {cert.status === 'APPROVED' ? (
             <CheckCircle2 className="w-3 h-3" />
+          ) : cert.status === 'REJECTED' ? (
+            <XCircle className="w-3 h-3" />
           ) : (
             <Clock className="w-3 h-3" />
           )}
@@ -162,6 +170,9 @@ function CertificationRow({
         )}
         {cert.status === 'APPROVED' && (
           <CheckCircle2 className="w-4 h-4 text-green-400/40" />
+        )}
+        {cert.status === 'REJECTED' && (
+          <XCircle className="w-4 h-4 text-red-400/40" />
         )}
       </td>
     </motion.tr>
@@ -423,6 +434,7 @@ export default function AdminDashboard() {
                 <option value="" className="bg-klu-darker">All Status</option>
                 <option value="PENDING" className="bg-klu-darker">Pending</option>
                 <option value="APPROVED" className="bg-klu-darker">Approved</option>
+                <option value="REJECTED" className="bg-klu-darker">Rejected</option>
               </select>
             </div>
           </div>

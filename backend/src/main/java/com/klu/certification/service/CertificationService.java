@@ -111,13 +111,36 @@ public class CertificationService {
         RegisteredCourse registration = registeredCourseRepository.findByUniversityIdIgnoreCaseAndCourseCodeIgnoreCase(universityId, courseCode)
                 .orElseThrow(() -> BusinessException.notFound("Certification request not found"));
 
-        // Notify student BEFORE deletion
+        registration.setStatus(RegisteredCourse.Status.REJECTED);
+        registration.setVerifiedAt(LocalDateTime.now());
+        registeredCourseRepository.save(registration);
+
         socketEventEmitter.emitCertificationRejected(universityId, courseCode);
+        socketEventEmitter.emitPendingCountUpdate();
+        socketEventEmitter.emitAnalyticsUpdate();
+
+        log.info("Certification for {} / {} marked as REJECTED", universityId, courseCode);
+    }
+
+    @Transactional
+    @CacheEvict(value = {"analytics", "dashboard"}, allEntries = true)
+    public void deleteRejectedCertification(String universityId, String courseCode) {
+        RegisteredCourse registration = registeredCourseRepository.findByUniversityIdIgnoreCaseAndCourseCodeIgnoreCase(universityId, courseCode)
+                .orElseThrow(() -> BusinessException.notFound("Certification request not found"));
+
+        if (!registration.getUniversityId().trim().equalsIgnoreCase(universityId.trim())) {
+            throw BusinessException.forbidden("You are not authorized to delete this certification request");
+        }
+
+        if (registration.getStatus() != RegisteredCourse.Status.REJECTED) {
+            throw BusinessException.badRequest("Only rejected certification requests can be deleted by the student");
+        }
 
         registeredCourseRepository.delete(registration);
         socketEventEmitter.emitPendingCountUpdate();
+        socketEventEmitter.emitAnalyticsUpdate();
 
-        log.info("Certification for {} / {} rejected and deleted", universityId, courseCode);
+        log.info("Student {} deleted rejected certification for {}", universityId, courseCode);
     }
 
     @Transactional(readOnly = true)

@@ -324,6 +324,7 @@ function StudentCertificationsModal({
   const STATUS_BADGES = {
     PENDING: 'badge-pending bg-yellow-400/10 border-yellow-400/20 text-yellow-400',
     APPROVED: 'badge-approved bg-green-400/10 border-green-400/20 text-green-400',
+    REJECTED: 'badge-rejected bg-red-400/10 border-red-400/20 text-red-400',
   };
 
   if (!isOpen || !student) return null;
@@ -394,7 +395,13 @@ function StudentCertificationsModal({
                         <td className="px-4 py-3 text-white font-semibold">{cert.courseTitle}</td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_BADGES[cert.status] || ''}`}>
-                            {cert.status === 'APPROVED' ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5 animate-pulse" />}
+                            {cert.status === 'APPROVED' ? (
+                              <CheckCircle2 className="w-2.5 h-2.5" />
+                            ) : cert.status === 'REJECTED' ? (
+                              <XCircle className="w-2.5 h-2.5" />
+                            ) : (
+                              <Clock className="w-2.5 h-2.5 animate-pulse" />
+                            )}
                             {cert.status}
                           </span>
                         </td>
@@ -422,7 +429,7 @@ function StudentCertificationsModal({
                               </button>
                               <button
                                 onClick={() => {
-                                  if (window.confirm(`Reject and delete certification request?`)) {
+                                  if (window.confirm("Reject this certification request?")) {
                                     rejectMutation.mutate(cert.id);
                                   }
                                 }}
@@ -436,6 +443,9 @@ function StudentCertificationsModal({
                           )}
                           {cert.status === 'APPROVED' && (
                             <CheckCircle2 className="w-4 h-4 text-green-400/40 ml-auto" />
+                          )}
+                          {cert.status === 'REJECTED' && (
+                            <XCircle className="w-4 h-4 text-red-400/40 ml-auto" />
                           )}
                         </td>
                       </tr>

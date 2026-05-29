@@ -10,6 +10,8 @@ import {
   Loader2,
   AlertCircle,
   BookOpen,
+  XCircle,
+  Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { studentApi } from '@/api';
@@ -52,6 +54,11 @@ const STATUS_CONFIG = {
     label: 'Approved',
     className: 'badge-approved',
     icon: CheckCircle2,
+  },
+  REJECTED: {
+    label: 'Rejected',
+    className: 'badge-rejected bg-red-400/10 border-red-400/20 text-red-400 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold',
+    icon: XCircle,
   },
 };
 
@@ -208,8 +215,36 @@ function SubmitModal({
 }
 
 function CertCard({ cert }: { cert: Certification }) {
+  const queryClient = useQueryClient();
+  const { addNotification } = useUIStore();
   const config = STATUS_CONFIG[cert.status];
-  const StatusIcon = config.icon;
+  const StatusIcon = config?.icon || Clock;
+
+  const deleteMutation = useMutation({
+    mutationFn: () => studentApi.deleteRejectedCertification(cert.courseCode),
+    onSuccess: () => {
+      addNotification({
+        type: 'success',
+        title: 'Certification deleted',
+        message: 'Rejected request has been permanently deleted.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['student-certifications'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-analytics'] });
+    },
+    onError: (err: any) => {
+      addNotification({
+        type: 'error',
+        title: 'Deletion failed',
+        message: err.response?.data?.message || 'Failed to delete request.',
+      });
+    },
+  });
+
+  const handleDelete = () => {
+    if (window.confirm(`Delete rejected certification for ${cert.courseTitle}?`)) {
+      deleteMutation.mutate();
+    }
+  };
 
   return (
     <motion.div
@@ -223,25 +258,44 @@ function CertCard({ cert }: { cert: Certification }) {
           <p className="font-semibold text-white">{cert.courseTitle}</p>
           <p className="text-xs text-white/40 mt-0.5">{cert.courseCode}</p>
         </div>
-        <span className={config.className}>
+        <span className={config?.className || 'badge-pending'}>
           <StatusIcon className="w-3 h-3" />
-          {config.label}
+          {config?.label || 'Pending'}
         </span>
       </div>
       <div className="flex items-center justify-between">
         <span className="text-xs text-white/40">
           {cert.status === 'APPROVED' && cert.verifiedAt
             ? `Verified ${formatRelativeTime(cert.verifiedAt)}`
+            : cert.status === 'REJECTED' && cert.verifiedAt
+            ? `Rejected ${formatRelativeTime(cert.verifiedAt)}`
             : `Submitted ${formatRelativeTime(cert.submittedAt)}`}
         </span>
-        <a
-          href={cert.credlyLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-xs text-white/40 hover:text-white transition-colors"
-        >
-          View Certificate <ExternalLink className="w-3 h-3" />
-        </a>
+        <div className="flex items-center gap-4">
+          <a
+            href={cert.credlyLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs text-white/40 hover:text-white transition-colors"
+          >
+            View Certificate <ExternalLink className="w-3 h-3" />
+          </a>
+          {cert.status === 'REJECTED' && (
+            <button
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+              title="Delete request"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Trash2 className="w-3 h-3" />
+              )}
+              Delete
+            </button>
+          )}
+        </div>
       </div>
     </motion.div>
   );

@@ -33,7 +33,7 @@ export interface CourseRequest {
 }
 
 // ─── Certification Types ───────────────────────────────────────────────────
-export type CertificationStatus = 'PENDING' | 'APPROVED';
+export type CertificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export interface Certification {
   id: string;

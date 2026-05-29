@@ -53,6 +53,6 @@ public class RegisteredCourse {
     private LocalDateTime verifiedAt;
 
     public enum Status {
-        PENDING, APPROVED
+        PENDING, APPROVED, REJECTED
     }
 }

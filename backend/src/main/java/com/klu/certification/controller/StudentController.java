@@ -46,4 +46,13 @@ public class StudentController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Certification submitted successfully", dto));
     }
+
+    @DeleteMapping("/certifications/{courseCode}")
+    public ResponseEntity<ApiResponse<Void>> deleteRejectedCertification(
+            @PathVariable String courseCode,
+            Authentication auth) {
+        String universityId = auth.getName();
+        certificationService.deleteRejectedCertification(universityId, courseCode);
+        return ResponseEntity.ok(ApiResponse.success("Rejected certification request deleted successfully", null));
+    }
 }

@@ -36,6 +36,10 @@ export const studentApi = {
     const res = await apiClient.post<ApiResponse<Certification>>('/student/certifications', data);
     return res.data.data;
   },
+
+  deleteRejectedCertification: async (courseCode: string): Promise<void> => {
+    await apiClient.delete(`/student/certifications/${courseCode}`);
+  },
 };
 
 // ─── Admin API ────────────────────────────────────────────────────────────
