@@ -4,9 +4,9 @@ spring:
     name: klu-certification-platform
 
   datasource:
-    url: jdbc:postgresql://ep-holy-rain-apg9pcaw-pooler.c-7.us-east-1.aws.neon.tech/CertificationVerificationDB?sslmode=require&channel_binding=require
-    username: neondb_owner
-    password: npg_koXIUMB7Fx1R
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://ep-holy-rain-apg9pcaw-pooler.c-7.us-east-1.aws.neon.tech/CertificationVerificationDB?sslmode=require&channel_binding=require}
+    username: ${SPRING_DATASOURCE_USERNAME:neondb_owner}
+    password: ${SPRING_DATASOURCE_PASSWORD:npg_koXIUMB7Fx1R}
     driver-class-name: org.postgresql.Driver
 
     hikari:
@@ -33,8 +33,8 @@ spring:
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
       timeout: 2000ms
 
   jackson:
