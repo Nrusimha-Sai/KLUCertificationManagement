@@ -65,27 +65,79 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-klu-darker flex items-center justify-center px-4 relative overflow-hidden">
-      {/* Background grid */}
-      <div className="absolute inset-0 bg-grid opacity-30" />
-      <div className="absolute inset-0 bg-gradient-radial from-klu-primary/20 via-transparent to-transparent" />
+      {/* Premium Animated Glowing Background Orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        {/* Glow Orb 1 - Deep Violet */}
+        <motion.div
+          animate={{
+            x: [0, 40, -30, 0],
+            y: [0, -70, 30, 0],
+            scale: [1, 1.2, 0.9, 1],
+          }}
+          transition={{
+            duration: 22,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute -top-[15%] -left-[10%] w-[55vw] h-[55vw] max-w-[650px] rounded-full bg-gradient-to-br from-klu-primary/25 to-violet-600/15 blur-[130px] opacity-60"
+        />
+        
+        {/* Glow Orb 2 - Electric Cyan */}
+        <motion.div
+          animate={{
+            x: [0, -60, 40, 0],
+            y: [0, 50, -60, 0],
+            scale: [1, 0.95, 1.15, 1],
+          }}
+          transition={{
+            duration: 28,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute -bottom-[15%] -right-[10%] w-[55vw] h-[55vw] max-w-[650px] rounded-full bg-gradient-to-tr from-cyan-500/15 to-klu-primary/15 blur-[140px] opacity-50"
+        />
+
+        {/* Glow Orb 3 - Royal Blue */}
+        <motion.div
+          animate={{
+            x: [0, 30, -35, 0],
+            y: [0, 40, -40, 0],
+            scale: [1, 1.15, 0.9, 1],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 3,
+          }}
+          className="absolute top-[35%] left-[20%] w-[38vw] h-[38vw] max-w-[450px] rounded-full bg-indigo-600/10 blur-[110px] opacity-40"
+        />
+      </div>
+
+      {/* Grid Pattern overlays with pointer-events-none to prevent blocking input clicks */}
+      <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-gradient-radial from-klu-primary/15 via-transparent to-transparent pointer-events-none z-0" />
 
       {/* Back to home */}
       <Link
         to="/"
-        className="absolute top-6 left-6 flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm"
+        className="absolute top-6 left-6 flex items-center gap-2 text-white/50 hover:text-white transition-all duration-300 text-sm z-20 hover:-translate-x-1"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Home
       </Link>
 
-      {/* Login Card */}
+      {/* Login Card Container with explicit z-index to guarantee focus and selectability */}
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="w-full max-w-md"
+        className="w-full max-w-md relative z-10"
       >
-        <div className="glass rounded-3xl p-8 shadow-glass-lg">
+        <div className="glass rounded-3xl p-8 shadow-glass-lg border border-white/10 relative overflow-hidden group">
+          {/* Subtle card glow highlight effect */}
+          <div className="absolute -inset-px bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl pointer-events-none" />
+          
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
             <motion.div
