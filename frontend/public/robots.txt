@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /login
+Disallow: /student/
+Disallow: /admin/
+
+Sitemap: https://klu-certs.com/sitemap.xml

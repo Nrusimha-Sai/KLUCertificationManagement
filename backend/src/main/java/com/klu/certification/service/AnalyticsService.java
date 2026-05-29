@@ -28,14 +28,17 @@ public class AnalyticsService {
     @Transactional(readOnly = true)
     public AnalyticsDto getDashboardAnalytics() {
         long totalStudents = userRepository.countStudents();
-        long totalCertifications = registeredCourseRepository.count();
-        long pendingRequests = registeredCourseRepository.countByStatus(RegisteredCourse.Status.PENDING);
         long approvedCertifications = registeredCourseRepository.countByStatus(RegisteredCourse.Status.APPROVED);
+        long rejectedCertifications = registeredCourseRepository.countByStatus(RegisteredCourse.Status.REJECTED);
+        long totalCertifications = approvedCertifications;
+        long pendingRequests = registeredCourseRepository.countByStatus(RegisteredCourse.Status.PENDING);
         long activeUsers = antiSpamService.getActiveUserCount();
 
-        double approvalRate = totalCertifications > 0
-                ? Math.round((double) approvedCertifications / totalCertifications * 10000.0) / 100.0
+        long decidedRequests = approvedCertifications + rejectedCertifications;
+        double approvalRate = decidedRequests > 0
+                ? Math.round((double) approvedCertifications / decidedRequests * 10000.0) / 100.0
                 : 0.0;
+
 
         List<Object[]> popularityRaw = registeredCourseRepository.findCoursePopularity();
         List<AnalyticsDto.CoursePopularityDto> coursePopularity = popularityRaw.stream()
