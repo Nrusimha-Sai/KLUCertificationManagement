@@ -2,7 +2,7 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --silent
+RUN npm install --legacy-peer-deps --silent
 COPY . .
 ARG VITE_API_URL=http://localhost:8080/api
 ARG VITE_SOCKET_URL=http://localhost:9092
