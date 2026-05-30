@@ -5,9 +5,12 @@ import com.klu.certification.dto.RegisteredCourseDto;
 import com.klu.certification.dto.SubmitCertificationRequest;
 import com.klu.certification.service.CertificationService;
 import com.klu.certification.service.CourseService;
+import com.klu.certification.service.ExcelExportService;
 import com.klu.certification.dto.CourseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,6 +25,7 @@ public class StudentController {
 
     private final CertificationService certificationService;
     private final CourseService courseService;
+    private final ExcelExportService excelExportService;
 
     @GetMapping("/courses")
     public ResponseEntity<ApiResponse<List<CourseDto>>> getCourses() {
@@ -35,6 +39,22 @@ public class StudentController {
         return ResponseEntity.ok(ApiResponse.success(
             certificationService.getStudentCertifications(universityId)
         ));
+    }
+
+    @GetMapping("/export/certifications")
+    public ResponseEntity<byte[]> exportMyCertifications(Authentication auth) {
+        String universityId = auth.getName();
+        List<RegisteredCourseDto> data = certificationService.getStudentCertifications(universityId);
+        byte[] excelBytes = excelExportService.exportCertifications(data);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ));
+        headers.setContentDispositionFormData("attachment", "my-certifications.xlsx");
+        headers.setContentLength(excelBytes.length);
+
+        return ResponseEntity.ok().headers(headers).body(excelBytes);
     }
 
     @PostMapping("/certifications")

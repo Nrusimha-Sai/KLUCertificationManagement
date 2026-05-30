@@ -13,6 +13,7 @@ public class AnalyticsDto {
     private long totalCertifications;
     private long pendingRequests;
     private long approvedCertifications;
+    private long rejectedCertifications;
     private double approvalRate;
     private long activeUsers;
     private List<CoursePopularityDto> coursePopularity;

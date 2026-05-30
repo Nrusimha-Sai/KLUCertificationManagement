@@ -63,6 +63,15 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success("Certification rejected and removed", null));
     }
 
+    @PostMapping("/certifications")
+    public ResponseEntity<ApiResponse<RegisteredCourseDto>> createCertificationManually(
+            @Valid @RequestBody AdminCreateCertificationRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+            "Certification created manually",
+            certificationService.createCertificationManually(request)
+        ));
+    }
+
     // ─── Courses ─────────────────────────────────────────────────────────────
 
     @GetMapping("/courses")
@@ -97,6 +106,21 @@ public class AdminController {
         ));
     }
 
+    @GetMapping("/courses/{courseCode}/export")
+    public ResponseEntity<byte[]> exportCourseCertifications(@PathVariable String courseCode) {
+        List<RegisteredCourseDto> data = certificationService.getRegistrationsByCourse(courseCode);
+        byte[] excelBytes = excelExportService.exportCertifications(data);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ));
+        headers.setContentDispositionFormData("attachment", "course-" + courseCode + "-certifications.xlsx");
+        headers.setContentLength(excelBytes.length);
+
+        return ResponseEntity.ok().headers(headers).body(excelBytes);
+    }
+
     // ─── Students ────────────────────────────────────────────────────────────
 
     @GetMapping("/students")
@@ -111,6 +135,21 @@ public class AdminController {
             "Student certifications retrieved",
             certificationService.getStudentCertifications(universityId)
         ));
+    }
+
+    @GetMapping("/students/{universityId}/export")
+    public ResponseEntity<byte[]> exportStudentCertifications(@PathVariable String universityId) {
+        List<RegisteredCourseDto> data = certificationService.getStudentCertifications(universityId);
+        byte[] excelBytes = excelExportService.exportCertifications(data);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ));
+        headers.setContentDispositionFormData("attachment", "student-" + universityId + "-certifications.xlsx");
+        headers.setContentLength(excelBytes.length);
+
+        return ResponseEntity.ok().headers(headers).body(excelBytes);
     }
 
     @PostMapping("/students")

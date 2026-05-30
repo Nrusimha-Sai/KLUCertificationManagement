@@ -13,6 +13,7 @@ import type {
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:9092';
 
 let globalSocket: Socket | null = null;
+let globalSocketToken: string | null = null;
 
 export function useSocket() {
   const [isConnected, setIsConnected] = useState(false);
@@ -22,19 +23,27 @@ export function useSocket() {
 
   const connect = useCallback(() => {
     if (!token) return;
-    if (globalSocket?.connected) {
+    if (globalSocket?.connected && globalSocketToken === token) {
       setIsConnected(true);
       return;
     }
 
+    if (globalSocket) {
+      console.log('[Socket] Disconnecting stale socket due to token update...');
+      globalSocket.disconnect();
+      globalSocket = null;
+    }
+
+    console.log('[Socket] Establishing connection with new token...');
     const socket = io(SOCKET_URL, {
       query: { token },
       transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 2000,
     });
 
     globalSocket = socket;
+    globalSocketToken = token;
 
     socket.on('connect', () => {
       console.log('[Socket] Connected:', socket.id);
@@ -55,6 +64,7 @@ export function useSocket() {
     if (globalSocket) {
       globalSocket.disconnect();
       globalSocket = null;
+      globalSocketToken = null;
       setIsConnected(false);
     }
   }, []);

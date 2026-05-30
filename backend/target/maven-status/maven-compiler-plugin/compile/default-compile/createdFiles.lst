@@ -9,6 +9,7 @@ com\klu\certification\socket\SocketEventHandler.class
 com\klu\certification\service\AntiSpamService.class
 com\klu\certification\dto\LoginRequest.class
 com\klu\certification\dto\ApiResponse.class
+com\klu\certification\dto\StudentListDto$StudentListDtoBuilder.class
 com\klu\certification\entity\RegisteredCourse$Status.class
 com\klu\certification\entity\User$UserBuilder.class
 com\klu\certification\dto\AnalyticsDto$TopStudentDto$TopStudentDtoBuilder.class
@@ -36,6 +37,7 @@ com\klu\certification\security\JwtUtil.class
 com\klu\certification\entity\RegisteredCourse$RegisteredCourseBuilder.class
 com\klu\certification\repository\CourseRepository.class
 com\klu\certification\service\CertificationService.class
+com\klu\certification\dto\AdminCreateCertificationRequest.class
 com\klu\certification\repository\UserRepository.class
 com\klu\certification\repository\RegisteredCourseRepository.class
 com\klu\certification\controller\AuthController.class
@@ -44,6 +46,7 @@ com\klu\certification\entity\Course.class
 com\klu\certification\controller\StudentController.class
 com\klu\certification\service\AnalyticsService.class
 com\klu\certification\dto\AnalyticsDto$CoursePopularityDto$CoursePopularityDtoBuilder.class
+com\klu\certification\dto\StudentListDto.class
 com\klu\certification\entity\RegisteredCourseId$RegisteredCourseIdBuilder.class
 com\klu\certification\dto\AuthResponse.class
 com\klu\certification\entity\Course$CourseBuilder.class

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,7 +18,7 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
-  XCircle,
+  XCircle, Download, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,7 +27,7 @@ import { adminApi } from '@/api';
 import { useUIStore } from '@/store/uiStore';
 import type { User } from '@/types';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { formatDate } from '@/lib/utils';
+import { formatDate, debounce } from '@/lib/utils';
 
 const studentSchema = z.object({
   universityId: z
@@ -52,6 +52,25 @@ const studentSchema = z.object({
 
 type StudentForm = z.infer<typeof studentSchema>;
 
+const manualCertSchema = z.object({
+  universityId: z.string().min(1, 'Student ID is required').trim(),
+  courseCode: z.string().min(1, 'Course selection is required').trim(),
+  credlyLink: z.string().min(1, 'Certification link is required').trim().refine(
+    (val) => {
+      try {
+        const withProto = val.match(/^https?:\/\//i) ? val : `https://${val}`;
+        new URL(withProto);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { message: 'Must be a valid URL link' }
+  ),
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED']),
+});
+type ManualCertForm = z.infer<typeof manualCertSchema>;
+
 interface StudentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -71,19 +90,19 @@ function StudentModal({ isOpen, onClose, editingStudent }: StudentModalProps) {
     resolver: zodResolver(studentSchema),
     values: editingStudent
       ? {
-          universityId: editingStudent.universityId,
-          name: editingStudent.name,
-          email: editingStudent.email || '',
-          dept: editingStudent.dept || '',
-          securityCode: '',
-        }
+        universityId: editingStudent.universityId,
+        name: editingStudent.name,
+        email: editingStudent.email || '',
+        dept: editingStudent.dept || '',
+        securityCode: '',
+      }
       : {
-          universityId: '',
-          name: '',
-          email: '',
-          dept: '',
-          securityCode: '',
-        },
+        universityId: '',
+        name: '',
+        email: '',
+        dept: '',
+        securityCode: '',
+      },
   });
 
   const createMutation = useMutation({
@@ -257,6 +276,181 @@ function StudentModal({ isOpen, onClose, editingStudent }: StudentModalProps) {
               >
                 {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                 {editingStudent ? 'Update' : 'Create'}
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+}
+
+function ManualCertificationModal({
+  isOpen,
+  onClose,
+  defaultUniversityId = '',
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  defaultUniversityId?: string;
+}) {
+  const queryClient = useQueryClient();
+  const { addNotification } = useUIStore();
+  const [courseSearch, setCourseSearch] = useState('');
+
+  // Fetch available courses
+  const { data: courses = [] } = useQuery({
+    queryKey: ['admin-courses'],
+    queryFn: adminApi.getCourses,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ManualCertForm>({
+    resolver: zodResolver(manualCertSchema),
+    values: {
+      universityId: defaultUniversityId,
+      courseCode: '',
+      credlyLink: '',
+      status: 'APPROVED', // Default to approved for manual admin creation
+    },
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: adminApi.createManualCertification,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-certifications'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['course-registrations'] });
+      queryClient.invalidateQueries({ queryKey: ['student-certifications'] });
+      addNotification({ type: 'success', title: 'Certification Created', message: 'Manually logged certification record.' });
+      reset();
+      onClose();
+    },
+    onError: (err: any) =>
+      addNotification({
+        type: 'error',
+        title: 'Error Creating Certification',
+        message: err.response?.data?.message || 'An error occurred.',
+      }),
+  });
+
+  const onSubmit = (data: ManualCertForm) => {
+    const formattedData = {
+      ...data,
+      credlyLink: data.credlyLink.match(/^https?:\/\//i)
+        ? data.credlyLink
+        : `https://${data.credlyLink}`,
+    };
+    submitMutation.mutate(formattedData);
+  };
+
+  // Filter courses based on searchable dropdown input
+  const filteredCourses = courses.filter(
+    (c) =>
+      c.courseCode.toLowerCase().includes(courseSearch.toLowerCase()) ||
+      c.courseTitle.toLowerCase().includes(courseSearch.toLowerCase())
+  );
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="relative w-full max-w-md glass rounded-3xl p-6 sm:p-8 shadow-glass-lg z-10 max-h-[90vh] overflow-y-auto"
+        >
+          <h2 className="text-xl font-bold text-white mb-6">Manually Add Certification</h2>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white/70 mb-2">Student University ID</label>
+              <input
+                {...register('universityId')}
+                disabled={!!defaultUniversityId}
+                placeholder="e.g. 21CC3140"
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:opacity-50 font-mono text-sm"
+              />
+              {errors.universityId && <p className="mt-1 text-xs text-red-400">{errors.universityId.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/70 mb-2 font-semibold">Select Course</label>
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="Search courses..."
+                  value={courseSearch}
+                  onChange={(e) => setCourseSearch(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 text-xs focus:outline-none focus:ring-2 focus:ring-white/20"
+                />
+                <select
+                  {...register('courseCode')}
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+                >
+                  <option value="" className="bg-klu-darker text-white/60">-- Select Course --</option>
+                  {filteredCourses.map((c) => (
+                    <option key={c.courseCode} value={c.courseCode} className="bg-klu-darker text-white">
+                      {c.courseCode} — {c.courseTitle}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {errors.courseCode && <p className="mt-1 text-xs text-red-400">{errors.courseCode.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/70 mb-2">Certification Link</label>
+              <input
+                {...register('credlyLink')}
+                type="url"
+                placeholder="e.g. https://www.credly.com/badges/..."
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+              />
+              {errors.credlyLink && <p className="mt-1 text-xs text-red-400">{errors.credlyLink.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/70 mb-2">Status</label>
+              <select
+                {...register('status')}
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+              >
+                <option value="APPROVED" className="bg-klu-darker">APPROVED (Completed)</option>
+                <option value="PENDING" className="bg-klu-darker">PENDING</option>
+                <option value="REJECTED" className="bg-klu-darker">REJECTED</option>
+              </select>
+              {errors.status && <p className="mt-1 text-xs text-red-400">{errors.status.message}</p>}
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-3 rounded-xl border border-white/10 text-white/60 hover:text-white transition-all text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitMutation.isPending}
+                className="flex-1 py-3 bg-white text-klu-darker font-bold rounded-xl hover:bg-klu-accent transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+              >
+                {submitMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                Add Entry
               </button>
             </div>
           </form>
@@ -475,11 +669,16 @@ export default function StudentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<User | null>(null);
   const [search, setSearch] = useState('');
+  const [inputValue, setInputValue] = useState('');
   const [selectedDept, setSelectedDept] = useState('ALL');
 
   // Certifications modal states
   const [isCertificationsOpen, setIsCertificationsOpen] = useState(false);
   const [selectedStudentForCerts, setSelectedStudentForCerts] = useState<User | null>(null);
+
+  // Manual certification modal states
+  const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+  const [manualCertUniversityId, setManualCertUniversityId] = useState('');
 
   const handleOpenCertifications = (student: User) => {
     setSelectedStudentForCerts(student);
@@ -496,7 +695,6 @@ export default function StudentsPage() {
     mutationFn: adminApi.deleteStudent,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-students'] });
-      // Invalidate registrations since student registration records are deleted as well
       queryClient.invalidateQueries({ queryKey: ['course-registrations'] });
       addNotification({ type: 'info', title: 'Student Profile Deleted' });
     },
@@ -518,30 +716,66 @@ export default function StudentsPage() {
     deleteMutation.mutate(universityId);
   };
 
-  // Dynamically extract departments list for filtering
-  const departments = [
-    'ALL',
-    ...Array.from(
-      new Set(
-        students
-          .map((s) => s.dept?.trim().toUpperCase())
-          .filter(Boolean)
-      )
-    ),
-  ] as string[];
+  const handleExportStudent = async (universityId: string) => {
+    try {
+      const blob = await adminApi.exportStudentData(universityId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${universityId}_certifications.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      addNotification({ type: 'error', title: 'Export Failed', message: err?.response?.data?.message || 'Unable to export data.' });
+    }
+  };
 
-  const filteredStudents = students.filter((s) => {
-    const matchesSearch =
-      s.universityId.toLowerCase().includes(search.toLowerCase()) ||
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      (s.email && s.email.toLowerCase().includes(search.toLowerCase())) ||
-      (s.dept && s.dept.toLowerCase().includes(search.toLowerCase()));
 
-    const matchesDept =
-      selectedDept === 'ALL' || (s.dept && s.dept.trim().toUpperCase() === selectedDept);
+  // Debounced search trigger
+  const debouncedSearch = useCallback(
+    debounce((val: string) => {
+      setSearch(val);
+    }, 350),
+    []
+  );
 
-    return matchesSearch && matchesDept;
-  });
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+    debouncedSearch(val);
+  };
+
+  // Dynamically extract departments list for filtering (Memoized)
+  const departments = useMemo(() => {
+    return [
+      'ALL',
+      ...Array.from(
+        new Set(
+          students
+            .map((s) => s.dept?.trim().toUpperCase())
+            .filter(Boolean)
+        )
+      ),
+    ] as string[];
+  }, [students]);
+
+  // Memoized filtered students to avoid heavy recalculations and freezes
+  const filteredStudents = useMemo(() => {
+    return students.filter((s) => {
+      const matchesSearch =
+        s.universityId.toLowerCase().includes(search.toLowerCase()) ||
+        s.name.toLowerCase().includes(search.toLowerCase()) ||
+        (s.email && s.email.toLowerCase().includes(search.toLowerCase())) ||
+        (s.dept && s.dept.toLowerCase().includes(search.toLowerCase()));
+
+      const matchesDept =
+        selectedDept === 'ALL' || (s.dept && s.dept.trim().toUpperCase() === selectedDept);
+
+      return matchesSearch && matchesDept;
+    });
+  }, [students, search, selectedDept]);
 
   return (
     <DashboardLayout>
@@ -557,18 +791,32 @@ export default function StudentsPage() {
               {students.length} total student accounts registered ({filteredStudents.length} visible)
             </p>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => {
-              setEditingStudent(null);
-              setIsModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white text-klu-darker font-semibold rounded-xl hover:bg-klu-accent transition-all shrink-0 text-sm shadow-md"
-          >
-            <Plus className="w-4 h-4" />
-            Add Student
-          </motion.button>
+          <div className="flex items-center gap-3 shrink-0">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                setManualCertUniversityId('');
+                setIsCertModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white/10 border border-white/15 text-white font-semibold rounded-xl hover:bg-white/20 transition-all text-sm shadow-md"
+            >
+              <Award className="w-4 h-4 text-yellow-400" />
+              Add Certification
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                setEditingStudent(null);
+                setIsModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white text-klu-darker font-semibold rounded-xl hover:bg-klu-accent transition-all text-sm shadow-md"
+            >
+              <Plus className="w-4 h-4" />
+              Add Student
+            </motion.button>
+          </div>
         </div>
 
         {/* Controls Bar */}
@@ -579,8 +827,8 @@ export default function StudentsPage() {
             <input
               type="text"
               placeholder="Search by ID, name, email, department..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={inputValue}
+              onChange={handleSearchChange}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-white/20"
             />
           </div>
@@ -691,6 +939,13 @@ export default function StudentsPage() {
                               <Pencil className="w-4 h-4" />
                             </button>
                             <button
+                              onClick={() => handleExportStudent(student.universityId)}
+                              className="p-2 text-white/40 hover:text-green-400 hover:bg-green-400/10 rounded-xl transition-all"
+                              title="Export Student"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                            <button
                               onClick={() => handleDelete(student.universityId, student.name)}
                               className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
                               title="Delete Student"
@@ -725,6 +980,15 @@ export default function StudentsPage() {
           setSelectedStudentForCerts(null);
         }}
         student={selectedStudentForCerts}
+      />
+
+      <ManualCertificationModal
+        isOpen={isCertModalOpen}
+        onClose={() => {
+          setIsCertModalOpen(false);
+          setManualCertUniversityId('');
+        }}
+        defaultUniversityId={manualCertUniversityId}
       />
     </DashboardLayout>
   );

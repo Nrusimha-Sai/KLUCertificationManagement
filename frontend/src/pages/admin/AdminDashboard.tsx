@@ -37,7 +37,7 @@ import { debounce, formatDate } from '@/lib/utils';
 import type { Certification } from '@/types';
 import DashboardLayout from '@/layouts/DashboardLayout';
 
-const PIE_COLORS = ['#22c55e', '#f59e0b'];
+const PIE_COLORS = ['#22c55e', '#f59e0b', '#ef4444'];
 
 function StatCard({
   title,
@@ -270,6 +270,7 @@ export default function AdminDashboard() {
     ? [
         { name: 'Approved', value: analytics.approvedCertifications },
         { name: 'Pending', value: analytics.pendingRequests },
+        { name: 'Rejected', value: analytics.rejectedCertifications || 0 },
       ]
     : [];
 
@@ -310,7 +311,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <StatCard
             title="Total Students"
             value={analytics?.totalStudents ?? '—'}
@@ -328,6 +329,12 @@ export default function AdminDashboard() {
             value={pendingCount || analytics?.pendingRequests || 0}
             icon={Clock}
             color="text-yellow-400"
+          />
+          <StatCard
+            title="Rejected Certifications"
+            value={analytics?.rejectedCertifications ?? '0'}
+            icon={XCircle}
+            color="text-red-400"
           />
           <StatCard
             title="Approval Rate"
@@ -396,14 +403,18 @@ export default function AdminDashboard() {
                     />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="flex justify-center gap-4 mt-2">
+                <div className="flex justify-center gap-4 mt-2 flex-wrap">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                    <span className="text-xs text-white/50">Approved</span>
+                    <span className="text-xs text-white/50">Approved ({analytics?.approvedCertifications})</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                    <span className="text-xs text-white/50">Pending</span>
+                    <span className="text-xs text-white/50">Pending ({analytics?.pendingRequests})</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                    <span className="text-xs text-white/50">Rejected ({analytics?.rejectedCertifications || 0})</span>
                   </div>
                 </div>
               </>

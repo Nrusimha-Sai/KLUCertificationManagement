@@ -72,6 +72,7 @@ export interface Analytics {
   totalCertifications: number;
   pendingRequests: number;
   approvedCertifications: number;
+  rejectedCertifications: number;
   approvalRate: number;
   activeUsers: number;
   coursePopularity: CoursePopularity[];

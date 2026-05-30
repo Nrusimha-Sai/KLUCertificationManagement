@@ -13,7 +13,8 @@ import java.util.UUID;
     indexes = {
         @Index(name = "idx_rc_university_id", columnList = "university_id"),
         @Index(name = "idx_rc_status", columnList = "status"),
-        @Index(name = "idx_rc_submitted_at", columnList = "submitted_at")
+        @Index(name = "idx_rc_submitted_at", columnList = "submitted_at"),
+        @Index(name = "idx_rc_course_code", columnList = "course_code")
     }
 )
 @Getter
@@ -38,7 +39,7 @@ public class RegisteredCourse {
     @Column(name = "course_title", nullable = false, length = 200)
     private String courseTitle;
 
-    @Column(name = "credly_link", nullable = false, length = 500)
+    @Column(name = "credly_link", nullable = false, unique = true, length = 500)
     private String credlyLink;
 
     @Enumerated(EnumType.STRING)

@@ -40,6 +40,13 @@ export const studentApi = {
   deleteRejectedCertification: async (courseCode: string): Promise<void> => {
     await apiClient.delete(`/student/certifications/${courseCode}`);
   },
+
+  exportMyCertifications: async (): Promise<Blob> => {
+    const res = await apiClient.get('/student/export/certifications', {
+      responseType: 'blob',
+    });
+    return res.data;
+  },
 };
 
 // ─── Admin API ────────────────────────────────────────────────────────────
@@ -108,6 +115,23 @@ export const adminApi = {
     return res.data;
   },
 
+  exportCourseCertifications: async (courseCode: string): Promise<Blob> => {
+    const res = await apiClient.get(`/admin/courses/${courseCode}/export`, {
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  createManualCertification: async (data: {
+    universityId: string;
+    courseCode: string;
+    credlyLink: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  }): Promise<Certification> => {
+    const res = await apiClient.post<ApiResponse<Certification>>('/admin/certifications', data);
+    return res.data.data;
+  },
+
   getStudents: async (): Promise<User[]> => {
     const res = await apiClient.get<ApiResponse<User[]>>('/admin/students');
     return res.data.data;
@@ -118,6 +142,13 @@ export const adminApi = {
       `/admin/students/${universityId}/certifications`
     );
     return res.data.data;
+  },
+
+  exportStudentData: async (universityId: string): Promise<Blob> => {
+    const res = await apiClient.get(`/admin/students/${universityId}/export`, {
+      responseType: 'blob',
+    });
+    return res.data;
   },
 
   createStudent: async (data: any): Promise<User> => {

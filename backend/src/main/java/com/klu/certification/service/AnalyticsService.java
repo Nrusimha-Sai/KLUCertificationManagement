@@ -65,6 +65,7 @@ public class AnalyticsService {
                 .totalCertifications(totalCertifications)
                 .pendingRequests(pendingRequests)
                 .approvedCertifications(approvedCertifications)
+                .rejectedCertifications(rejectedCertifications)
                 .approvalRate(approvalRate)
                 .activeUsers(activeUsers)
                 .coursePopularity(coursePopularity)
